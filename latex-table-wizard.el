@@ -5,7 +5,7 @@
 ;; Author: Enrico Flor <enrico@eflor.net>
 ;; Maintainer: Enrico Flor <enrico@eflor.net>
 ;; URL: https://github.com/enricoflor/latex-table-wizard
-;; Version: 1.5.2
+;; Version: 1.5.3
 ;; Keywords: convenience
 
 ;; Package-Requires: ((emacs "27.1") (auctex "12.1") (transient "0.3.7"))
@@ -1074,6 +1074,16 @@ There are five possible values for MODE:
   (when (latex-table-wizard--in-tabular-env-p)
     (latex-table-wizard--setup)
     (latex-table-wizard--remove-overlays)
+    (unless (member last-command
+                    '(latex-table-wizard-align
+                      latex-table-wizard-align-left
+                      latex-table-wizard-align-right
+                      latex-table-wizard-align-center
+                      latex-table-wizard-compress))
+      ;; always start with aligning left, as per fountainer's
+      ;; suggestion
+      ;; https://github.com/enricoflor/latex-table-wizard/issues/2#issue-1748301074
+      (setq latex-table-wizard--align-status '(left center right compress)))
     (save-excursion
       (let ((message-log-max 0)
             (md (or mode (car latex-table-wizard--align-status)))
@@ -1649,19 +1659,32 @@ LEN."
 It replaces the content of current cell upon calling
 `latex-table-wizard-yank-cell-content'.")
 
+(defun latex-table-wizard--get-cell-content (&optional kill)
+  "Get content of cell at point.
+
+Add it to the `kill-ring' and as the value of
+`latex-table-wizard--copied-cell-content'.
+
+If KILL is non-nil, also remove that content from the cell. "
+  (let* ((cell (latex-table-wizard--get-thing 'cell))
+         (cont  (buffer-substring (plist-get cell :start)
+                                  (plist-get cell :end))))
+    (when kill
+      (delete-region (plist-get cell :start) (plist-get cell :end))
+      (insert " "))
+    (kill-new (string-trim cont))
+    (setq latex-table-wizard--copied-cell-content cont)
+    (message "Content of cell (%s,%s) %s"
+             (plist-get cell :column) (plist-get cell :row)
+             (if kill "killed" "copied"))))
+
 (defun latex-table-wizard-copy-cell-content ()
   "Add content of current cell to the `kill-ring'.
 
 Also set the value of `latex-table-wizard--copied-cell-content'
 to it."
   (interactive)
-  (let* ((cell (latex-table-wizard--get-thing 'cell))
-         (cont (buffer-substring (plist-get cell :start)
-                                 (plist-get cell :end))))
-    (setq latex-table-wizard--copied-cell-content cont)
-    (kill-new cont)
-    (message "Content of cell (%s,%s) copied"
-             (plist-get cell :column) (plist-get cell :row))))
+  (funcall #'latex-table-wizard--get-cell-content))
 
 (defun latex-table-wizard-yank-cell-content ()
   "Replace content of current cell with a previously copied one.
@@ -1686,15 +1709,7 @@ That is whatever the current value of
 Also set the value of `latex-table-wizard--copied-cell-content'
 to it."
   (interactive)
-  (let* ((cell (latex-table-wizard--get-thing 'cell))
-         (cont  (buffer-substring (plist-get cell :start)
-                                  (plist-get cell :end))))
-    (delete-region (plist-get cell :start) (plist-get cell :end))
-    (insert " ")
-    (kill-new cont)
-    (setq latex-table-wizard--copied-cell-content cont)
-    (message "Content of cell (%s,%s) copied"
-             (plist-get cell :column) (plist-get cell :row))))
+  (funcall #'latex-table-wizard--get-cell-content t))
 
 
 
