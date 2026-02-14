@@ -1,2 +1,2 @@
-;; Generated package description from latex-table-wizard.el  -*- no-byte-compile: t -*-
-(define-package "latex-table-wizard" "1.5.4.0.20230903.170436" "Magic editing of LaTeX tables" '((emacs "27.1") (auctex "12.1") (transient "0.3.7")) :commit "b55d215dbef321194dbf10553d4c0d3b244a50f0" :authors '(("Enrico Flor" . "enrico@eflor.net")) :maintainer '("Enrico Flor" . "enrico@eflor.net") :keywords '("convenience") :url "https://github.com/enricoflor/latex-table-wizard")
+;; Generated package description from latex-table-wizard.el  -*- no-byte-compile: t; lexical-binding:t -*-
+(define-package "latex-table-wizard" "1.5.5.0.20260212.172924" "Magic editing of LaTeX tables" '((emacs "27.1") (auctex "12.1") (transient "0.3.7")) :commit "681c03010e38e8cb4089171be72d73e6d28cd472" :authors '(("Enrico Flor" . "enrico@eflor.net")) :maintainer '("Enrico Flor" . "enrico@eflor.net") :keywords '("convenience" "tex") :url "https://github.com/enricoflor/latex-table-wizard")
