@@ -14,6 +14,6 @@ File: dir,	Node: Top	This is the top of the INFO tree
 
 * Menu:
 
-Misc
-* (readme).                     LaTeX table wizard - Magic editing of LaTeX 
-                                  tables.
+Emacs misc features
+* LaTeX Table Wizard: (latex-table-wizard).
+                                Magic editing of LaTeX tables.

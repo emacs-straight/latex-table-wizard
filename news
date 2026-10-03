@@ -1,5 +1,74 @@
 -*- mode: org -*-
 
+* 1.6.1 <2026-10-01 Thu>
+
+Bug fix release.  No user-facing command, keybinding, option, hook or
+face was added or removed.
+
+** Parsing
++ A brace group or inline math directly followed by a column
+  delimiter (e.g. ~{a}& b~ or ~$x$& b~) was merged with the next cell.
++ A last row not terminated by a row delimiter was not counted, so
+  moving across the end of the table skipped it or landed in the
+  wrong row.  It also wasn't considered when detecting ragged tables.
++ Horizontal-line macros between the last row and ~\end~ (e.g.
+  ~\bottomrule~) were parsed as an extra cell, which commands could
+  then edit (~insert-column~ produced ~\bottomrule &~).
++ A horizontal-line macro followed by a row starting at the beginning
+  of a line was parsed as part of that row's first cell: macro names
+  could extend across line breaks.
++ The first cell of every row included the line break before it.  As a
+  consequence, swapping rows, killing row or column content and
+  deleting columns could join rows onto a single line, and aligning
+  left blank lines between rows.
++ Parsing could insert a space after ~\begin{...}~ (and fill an empty
+  environment) without marking the buffer as modified and without
+  recording the change for undo.
++ Starting the wizard with point on the ~\begin~ line signaled an error.
++ Cells of a previously visited table could be picked up when looking
+  for the cell at point.
+
+** Commands
++ ~latex-table-wizard-delete-column~ deleted text outside the current
+  row (and even outside the table) when a row had a single cell, e.g.
+  in single-column or ragged tables.  The deleted content is now also
+  added to the kill ring, as ~latex-table-wizard-delete-row~ does.
++ ~latex-table-wizard-comment-out~ always signaled an error (a local
+  variable shadowed the dynamic variable ~comment-end~), and could
+  comment out text outside the current row.
++ ~latex-table-wizard-insert-column~, ~latex-table-wizard-delete-column~
+  and ~latex-table-wizard-kill-column-content~ failed when called after
+  another command that modified the table.
++ ~latex-table-wizard-kill-column-content~ always signaled an error
+  after killing the content.
++ ~latex-table-wizard-delete-row~ left a blank line behind.
++ ~latex-table-wizard-edit-cell~ added two spaces to the cell every
+  time it was used.  New content longer than the old one is now still
+  separated from the delimiters by a space (same for
+  ~latex-table-wizard-yank-cell-content~).
++ ~latex-table-wizard-edit-cell~, ~latex-table-wizard-yank-cell-content~
+  and ~latex-table-wizard-kill-cell-content~ now run
+  ~latex-table-wizard-after-table-modified-hook~ like the other editing
+  commands.
+
+** Customization and minor mode
++ Environments added to ~latex-table-wizard-new-environments-alist~
+  after the package was loaded were not recognized.
++ The customization interface for ~latex-table-wizard-transient-keys~
+  was broken (its ~:type~ was not evaluated).
++ Disabling ~latex-table-wizard-mode~ did not remove its
+  ~pre-command-hook~ function, and every activation added a new one.
+
+** Internals
+*** New internal functions
+  ~+ latex-table-wizard--cell-and-delimiter-bounds COORD~
+  ~+ latex-table-wizard--replace-cell-content BEG END STR LEN~
+  ~+ latex-table-wizard--cleanup-if-not-in-chain~
+  ~+ latex-table-wizard--environments~ (replaces the variable of the same name)
+
+*** Removed internal variables
++ ~latex-table-wizard--environments~ (now a function, see above)
+
 * 1.6.0 <2026-05-03 Sun>
 
 ** Complete overhaul of the interals
@@ -12,84 +81,5 @@ we list the functions and variables removed and their replacement
 (again, all of them never being part of the public API).
 
 *** Removed internal functions and variables
-
-The following symbols existed in 1.5.5 and are absent in 1.6.0.  They
-were never part of the public API.
-
-**** Functions removed:
-+  ~latex-table-wizard--parse-table~       (replaced by --parse)
-+  ~latex-table-wizard--get-env-ends~      (replaced by struct slots)
-+  ~latex-table-wizard--get-cell-pos~      (replaced by gethash)
-+  ~latex-table-wizard--locate-point~      (replaced by get-text-property)
-+  ~latex-table-wizard--get-thing~         (replaced by coord accessors)
-+  ~latex-table-wizard--sort~              (replaced by --row-coords / --col-coords)
-+  ~latex-table-wizard--get-other-cell~    (replaced by --jump internals)
-+  ~latex-table-wizard--get-landing-index~ (no longer needed)
-+  ~latex-table-wizard--shift~             (replaced by --shift-coord)
-+  ~latex-table-wizard--hl-cells~          (replaced by --hl-coords)
-+  ~latex-table-wizard--swap-line~         (replaced by --swap-lines)
-
-**** Variables removed:
-+ ~latex-table-wizard--parse~             (replaced by --current-table)
-+ ~latex-table-wizard--table-begin~       (replaced by struct :inner-beg)
-+ ~latex-table-wizard--table-end~         (replaced by struct :inner-end)
-
-*** New internal functions
-
-  ~+ latex-table-wizard--parse~
-  ~+ latex-table-wizard--do-parse~
-  ~+ latex-table-wizard--invalidate~
-  ~+ latex-table-wizard--table-valid-p~
-  ~+ latex-table-wizard--coord-at-point~
-  ~+ latex-table-wizard--snap-to-cell~
-  ~+ latex-table-wizard--current-coord~
-  ~+ latex-table-wizard--all-coords~
-  ~+ latex-table-wizard--row-coords ROW &optional REVERSE~
-  ~+ latex-table-wizard--col-coords COL &optional REVERSE~
-  ~+ latex-table-wizard--current-row-coords &optional REVERSE~
-  ~+ latex-table-wizard--current-col-coords &optional REVERSE~
-  ~+ latex-table-wizard--shift-coord COORD DIR~
-  ~+ latex-table-wizard--cell-bounds COORD~
-  ~+ latex-table-wizard--cell-beg COORD~
-  ~+ latex-table-wizard--cell-end COORD~
-  ~+ latex-table-wizard--hl-coords COORDS~
-  ~+ latex-table-wizard--swap-lines TYPE LINE1 LINE2~
-  ~+ latex-table-wizard--selection-in-current-table-p~
-
-
-
-** Added new hook: latex-table-wizard-after-movement-hook
-Hook run after execution of a latex-table-wizard movement command.
-* 1.5.3 <2023-08-21 Mon>
-** Commands changed:
-*** latex-table-wizard-align
-Makes it so calling latex-table-wizard-align always start the cycle
-with left alignment.  This behavior was suggested by fountainer
-* 1.5.2 <2023-05-16 Tue>
-** User option changed: latex-table-wizard-row-delimiters
-Default value changed from "\\\\\\\\" to "\\\\".
-* 1.4.0 <2023-05-02 Tue>
-** New commands:
-*** latex-table-wizard-edit-cell
-*** latex-table-wizard-copy-cell-content
-*** latex-table-wizard-yank-cell-content
-*** latex-table-wizard-kill-cell-content
-* 1.3.1 <2023-04-13 Thu>
-** Added new hook: latex-table-wizard-after-table-modified-hook
-This hook is ran whenever a latex-table-wizard command that
-potentially changes the table is called.  This fixes a bug that previously
-occurred when the user would swap around things in a table
-"vacuously", such that after the command the content of the table was
-exactly the same as before.
-* 1.3.0 <2023-04-10 Mon>
-** New commands:
-*** latex-table-wizard-kill-row-content
-*** latex-table-wizard-kill-column-content
-*** latex-table-wizard-delete-row
-*** latex-table-wizard-delete-column
-*** latex-table-wizard-comment-out
-*** latex-table-wizard-comment-out-content
-** Commands changed:
-*** latex-table-wizard-kill-column
 ...
 ...
